@@ -1,0 +1,28 @@
+{
+  "id": "meteodesplages",
+  "name": "Météo des plages",
+  "description": {
+    "fr_FR": "Météo marine et météo des plages avec widget responsive, données Open-Meteo et marées modélisées."
+  },
+  "licence": "AGPL",
+  "author": "OpenAI pour Eric",
+  "require": "4.4",
+  "category": "weather",
+  "hasDependency": false,
+  "hasOwnDeamon": false,
+  "maxDependancyInstallTime": 0,
+  "changelog": "",
+  "documentation": "",
+  "language": [
+    "fr_FR"
+  ],
+  "pluginVersion": "3.1.0",
+  "compatibility": [
+    "miniplus",
+    "smart",
+    "rpi",
+    "docker",
+    "diy",
+    "mobile"
+  ]
+}
