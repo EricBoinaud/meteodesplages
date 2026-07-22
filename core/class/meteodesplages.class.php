@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/Utils/WeatherFormatter.php';
 require_once __DIR__ . '/Repository/BeachRepository.php';
+require_once __DIR__ . '/Provider/OpenMeteoProvider.php';
 /* This file is part of Jeedom.
  *
  * Jeedom is free software: you can redistribute it and/or modify
@@ -329,26 +330,10 @@ class meteodesplages extends eqLogic {
             throw new Exception('Latitude ou longitude invalide');
         }
 
-        $weatherUrl = 'https://api.open-meteo.com/v1/forecast?' . http_build_query([
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'current' => 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation',
-            'daily' => 'uv_index_max,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
-            'timezone' => 'Europe/Paris',
-            'forecast_days' => 1
-        ]);
+        $provider = new OpenMeteoProvider();
 
-        $marineUrl = 'https://marine-api.open-meteo.com/v1/marine?' . http_build_query([
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'current' => 'wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,sea_surface_temperature',
-            'timezone' => 'Europe/Paris',
-            'forecast_days' => 3,
-            'cell_selection' => 'sea'
-        ]);
-
-        $weather = $this->getJson($weatherUrl);
-        $marine = $this->getJson($marineUrl);
+        $weather = $provider->getWeather($latitude, $longitude);
+        $marine = $provider->getMarine($latitude, $longitude);
         $tideMarine = $this->getTideJson($latitude, $longitude);
 
         $current = isset($weather['current']) ? $weather['current'] : [];
