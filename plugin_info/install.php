@@ -1,13 +1,19 @@
 <?php
-function meteodesplages_install() {
+
+function meteodesplages_install()
+{
 }
 
-function meteodesplages_update() {
+function meteodesplages_update()
+{
     foreach (eqLogic::byType('meteodesplages') as $eqLogic) {
-        $eqLogic->setConfiguration('tide_source', 'openmeteo');
-        $eqLogic->save(true);
+        if ($eqLogic->getConfiguration('tide_source', '') === '') {
+            $eqLogic->setConfiguration('tide_source', 'openmeteo');
+            $eqLogic->save(true);
+        }
     }
 }
 
-function meteodesplages_remove() {
+function meteodesplages_remove()
+{
 }

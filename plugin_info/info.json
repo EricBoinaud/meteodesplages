@@ -5,7 +5,7 @@
     "fr_FR": "Météo marine et météo des plages avec widget responsive, données Open-Meteo et marées modélisées."
   },
   "licence": "AGPL",
-  "author": "OpenAI pour Eric",
+  "author": "Eric Boinaud & OpenAI",
   "require": "4.4",
   "category": "weather",
   "hasDependency": false,

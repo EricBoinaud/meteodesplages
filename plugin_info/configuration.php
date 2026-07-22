@@ -17,7 +17,7 @@ if (!isConnect('admin')) {
     <div class="form-group">
       <label class="col-sm-4 control-label">{{Version du paquet local}}</label>
       <div class="col-sm-6">
-        <span class="form-control" style="border:0;box-shadow:none;background:transparent;padding-left:0;"><strong>3.1.0</strong></span>
+        <span class="form-control" style="border:0;box-shadow:none;background:transparent;padding-left:0;"><strong>4.0.0-beta1</strong</strong></span>
         <span class="help-block">{{Jeedom laisse parfois le champ Version de l’encadré État vide pour un plugin installé manuellement sans dépôt Market ou GitHub associé.}}</span>
       </div>
     </div>
