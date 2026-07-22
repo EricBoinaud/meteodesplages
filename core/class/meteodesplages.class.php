@@ -1,6 +1,7 @@
 <?php
 
 require_once __DIR__ . '/Utils/WeatherFormatter.php';
+require_once __DIR__ . '/Repository/BeachRepository.php';
 /* This file is part of Jeedom.
  *
  * Jeedom is free software: you can redistribute it and/or modify
@@ -13,16 +14,9 @@ class meteodesplages extends eqLogic {
 
     const PLUGIN_VERSION = '3.1.0';
 
-    private static function beachPresets() {
-        return [
-            'pontaillac' => ['latitude' => '45.6267', 'longitude' => '-1.0518', 'image' => 'plugins/meteodesplages/data/images/pontaillac.webp'],
-            'grande_conche' => ['latitude' => '45.6184', 'longitude' => '-1.0208', 'image' => ''],
-            'foncillon' => ['latitude' => '45.6229', 'longitude' => '-1.0364', 'image' => ''],
-            'le_chay' => ['latitude' => '45.6265', 'longitude' => '-1.0427', 'image' => ''],
-            'pigeonnier' => ['latitude' => '45.6295', 'longitude' => '-1.0481', 'image' => ''],
-            'nauzan' => ['latitude' => '45.6388', 'longitude' => '-1.0725', 'image' => ''],
-            'saint_georges' => ['latitude' => '45.6038', 'longitude' => '-1.0009', 'image' => '']
-        ];
+    private static function beachPresets(): array
+    {
+        return BeachRepository::all();
     }
 
     public function preSave() {
