@@ -21,30 +21,31 @@ final class OpenMeteoProvider
      */
     public function getWeather($latitude, $longitude): array
     {
-        $url = self::WEATHER_API_URL . '?' . http_build_query([
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'current' => implode(',', [
-                'temperature_2m',
-                'apparent_temperature',
-                'relative_humidity_2m',
-                'weather_code',
-                'wind_speed_10m',
-                'wind_direction_10m',
-                'wind_gusts_10m',
-                'precipitation',
-            ]),
-            'daily' => implode(',', [
-                'uv_index_max',
-                'temperature_2m_max',
-                'temperature_2m_min',
-                'precipitation_probability_max',
-            ]),
-            'timezone' => $this->timezone,
-            'forecast_days' => 1,
-        ]);
-
-        return $this->requestJson($url);
+        return $this->requestJson(
+            self::WEATHER_API_URL,
+            [
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'current' => implode(',', [
+                    'temperature_2m',
+                    'apparent_temperature',
+                    'relative_humidity_2m',
+                    'weather_code',
+                    'wind_speed_10m',
+                    'wind_direction_10m',
+                    'wind_gusts_10m',
+                    'precipitation',
+                ]),
+                'daily' => implode(',', [
+                    'uv_index_max',
+                    'temperature_2m_max',
+                    'temperature_2m_min',
+                    'precipitation_probability_max',
+                ]),
+                'timezone' => $this->timezone,
+                'forecast_days' => 1,
+            ]
+        );
     }
 
     /**
@@ -52,31 +53,75 @@ final class OpenMeteoProvider
      */
     public function getMarine($latitude, $longitude): array
     {
-        $url = self::MARINE_API_URL . '?' . http_build_query([
+        return $this->requestJson(
+            self::MARINE_API_URL,
+            [
+                'latitude' => $latitude,
+                'longitude' => $longitude,
+                'current' => implode(',', [
+                    'wave_height',
+                    'wave_direction',
+                    'wave_period',
+                    'swell_wave_height',
+                    'swell_wave_direction',
+                    'swell_wave_period',
+                    'sea_surface_temperature',
+                ]),
+                'timezone' => $this->timezone,
+                'forecast_days' => 3,
+                'cell_selection' => 'sea',
+            ]
+        );
+    }
+
+    /**
+     * Récupère la série de niveau marin utilisée pour calculer les marées.
+     *
+     * La série 15 minutes est prioritaire.
+     * En cas d'échec, un repli automatique est effectué sur la série horaire.
+     */
+    public function getTides($latitude, $longitude): array
+    {
+        $baseParameters = [
             'latitude' => $latitude,
             'longitude' => $longitude,
-            'current' => implode(',', [
-                'wave_height',
-                'wave_direction',
-                'wave_period',
-                'swell_wave_height',
-                'swell_wave_direction',
-                'swell_wave_period',
-                'sea_surface_temperature',
-            ]),
             'timezone' => $this->timezone,
-            'forecast_days' => 3,
+            'forecast_days' => 4,
+            'past_days' => 1,
             'cell_selection' => 'sea',
-        ]);
+        ];
 
-        return $this->requestJson($url);
+        try {
+            return $this->requestJson(
+                self::MARINE_API_URL,
+                array_merge($baseParameters, [
+                    'minutely_15' => 'sea_level_height_msl',
+                    'forecast_minutely_15' => 384,
+                    'past_minutely_15' => 96,
+                ])
+            );
+        } catch (Throwable $exception) {
+            log::add(
+                'meteodesplages',
+                'warning',
+                'Marées 15 min indisponibles, repli horaire : ' . $exception->getMessage()
+            );
+        }
+
+        return $this->requestJson(
+            self::MARINE_API_URL,
+            array_merge($baseParameters, [
+                'hourly' => 'sea_level_height_msl',
+            ])
+        );
     }
 
     /**
      * Exécute une requête HTTP et retourne le JSON décodé.
      */
-    private function requestJson($url): array
+    private function requestJson($baseUrl, array $parameters): array
     {
+        $url = $baseUrl . '?' . http_build_query($parameters);
         $ch = curl_init();
 
         if ($ch === false) {

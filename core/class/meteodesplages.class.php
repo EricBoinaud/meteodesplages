@@ -146,38 +146,6 @@ class meteodesplages extends eqLogic {
         $refresh->save();
     }
 
-    private function getJson($url) {
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CONNECTTIMEOUT => 10,
-            CURLOPT_TIMEOUT => 20,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_USERAGENT => 'Jeedom-MeteoDesPlages/1.0',
-            CURLOPT_SSL_VERIFYPEER => true,
-            CURLOPT_SSL_VERIFYHOST => 2
-        ]);
-        $body = curl_exec($ch);
-        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        curl_close($ch);
-
-        if ($body === false || $error !== '') {
-            throw new Exception('Erreur réseau : ' . $error);
-        }
-        if ($httpCode < 200 || $httpCode >= 300) {
-            throw new Exception('Réponse HTTP ' . $httpCode);
-        }
-        $json = json_decode($body, true);
-        if (!is_array($json)) {
-            throw new Exception('Réponse JSON invalide');
-        }
-        if (isset($json['error']) && $json['error']) {
-            throw new Exception(isset($json['reason']) ? $json['reason'] : 'Erreur renvoyée par Open-Meteo');
-        }
-        return $json;
-    }
 
     private function updateValue($logicalId, $value, $allowEmpty = false) {
         if (!$allowEmpty && ($value === null || $value === '')) {
@@ -297,31 +265,6 @@ class meteodesplages extends eqLogic {
         return $days[(int)date('w', $timestamp)] . ' ' . date('d/m', $timestamp);
     }
 
-    private function getTideJson($latitude, $longitude) {
-        $base = [
-            'latitude' => $latitude,
-            'longitude' => $longitude,
-            'timezone' => 'Europe/Paris',
-            'forecast_days' => 4,
-            'past_days' => 1,
-            'cell_selection' => 'sea'
-        ];
-
-        // La série 15 minutes est prioritaire. En cas d'indisponibilité, repli sur l'horaire.
-        try {
-            $params = $base;
-            $params['minutely_15'] = 'sea_level_height_msl';
-            $params['forecast_minutely_15'] = 384;
-            $params['past_minutely_15'] = 96;
-            return $this->getJson('https://marine-api.open-meteo.com/v1/marine?' . http_build_query($params));
-        } catch (Throwable $e) {
-            log::add('meteodesplages', 'warning', $this->getHumanName() . ' : marées 15 min indisponibles, repli horaire : ' . $e->getMessage());
-        }
-
-        $params = $base;
-        $params['hourly'] = 'sea_level_height_msl';
-        return $this->getJson('https://marine-api.open-meteo.com/v1/marine?' . http_build_query($params));
-    }
 
     public function refresh() {
         $latitude = trim($this->getConfiguration('latitude', '45.6267'));
@@ -334,7 +277,7 @@ class meteodesplages extends eqLogic {
 
         $weather = $provider->getWeather($latitude, $longitude);
         $marine = $provider->getMarine($latitude, $longitude);
-        $tideMarine = $this->getTideJson($latitude, $longitude);
+        $tideMarine = $provider->getTides($latitude, $longitude);
 
         $current = isset($weather['current']) ? $weather['current'] : [];
         $daily = isset($weather['daily']) ? $weather['daily'] : [];
