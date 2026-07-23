@@ -9,7 +9,7 @@
 
 class meteodesplages extends eqLogic {
 
-    const PLUGIN_VERSION = '1.2.0';
+    const PLUGIN_VERSION = '1.2.1';
 
     private const BEACHES = [
         'pontaillac' => [
