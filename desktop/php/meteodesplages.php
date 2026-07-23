@@ -67,7 +67,7 @@ $eqLogics = eqLogic::byType($plugin->getId());
               <label class="col-sm-3 control-label">{{Plage}}</label>
               <div class="col-sm-3">
                 <select id="mdpBeachPreset" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="plage">
-                  <option value="pontaillac" data-lat="45.6267" data-lon="-1.0518" data-image="plugins/meteodesplages/data/images/pontaillac.webp">Pontaillac</option>
+                  <option value="pontaillac" data-lat="45.6267" data-lon="-1.0518" data-image="/plugins/meteodesplages/data/images/pontaillac.webp">Pontaillac</option>
                   <option value="grande_conche" data-lat="45.6184" data-lon="-1.0208" data-image="">Grande Conche</option>
                   <option value="foncillon" data-lat="45.6229" data-lon="-1.0364" data-image="">Foncillon</option>
                   <option value="le_chay" data-lat="45.6265" data-lon="-1.0427" data-image="">Le Chay</option>
@@ -90,7 +90,7 @@ $eqLogics = eqLogic::byType($plugin->getId());
             <div class="form-group">
               <label class="col-sm-3 control-label">{{Image du widget}}</label>
               <div class="col-sm-5">
-                <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="image" placeholder="plugins/meteodesplages/data/images/pontaillac.webp"/>
+                <input type="text" class="eqLogicAttr form-control" data-l1key="configuration" data-l2key="image" placeholder="/plugins/meteodesplages/data/images/pontaillac.webp"/>
                 <span class="help-block">{{Pour Pontaillac, l'image est incluse. Pour une autre plage, indiquez l'URL d'une image ou laissez vide pour utiliser le fond marin.}}</span>
               </div>
             </div>

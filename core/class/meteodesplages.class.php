@@ -16,7 +16,7 @@ class meteodesplages extends eqLogic {
             'name' => 'Pontaillac',
             'latitude' => '45.6267',
             'longitude' => '-1.0518',
-            'image' => 'plugins/meteodesplages/data/images/pontaillac.webp'
+            'image' => '/plugins/meteodesplages/data/images/pontaillac.webp'
         ],
         'grande_conche' => [
             'name' => 'Grande Conche',
@@ -76,7 +76,7 @@ class meteodesplages extends eqLogic {
             $this->setConfiguration('longitude', $presets[$preset]['longitude']);
             if ($presets[$preset]['image'] !== '') {
                 $this->setConfiguration('image', $presets[$preset]['image']);
-            } elseif (trim($this->getConfiguration('image', '')) === 'plugins/meteodesplages/data/images/pontaillac.webp') {
+            } elseif (trim($this->getConfiguration('image', '')) === '/plugins/meteodesplages/data/images/pontaillac.webp') {
                 $this->setConfiguration('image', '');
             }
         }
@@ -103,7 +103,7 @@ class meteodesplages extends eqLogic {
             $this->setConfiguration('plage', 'pontaillac');
         }
         if ($this->getConfiguration('image', '') === '') {
-            $this->setConfiguration('image', 'plugins/meteodesplages/data/images/pontaillac.webp');
+            $this->setConfiguration('image', '/plugins/meteodesplages/data/images/pontaillac.webp');
         }
         $this->setConfiguration('tide_source', 'openmeteo');
     }
@@ -548,7 +548,7 @@ class meteodesplages extends eqLogic {
             return is_object($cmd) ? (int) $cmd->getId() : 0;
         };
 
-        $image = trim($this->getConfiguration('image', 'plugins/meteodesplages/data/images/pontaillac.webp'));
+        $image = trim($this->getConfiguration('image', '/plugins/meteodesplages/data/images/pontaillac.webp'));
         $code = $this->cmdValue('code_meteo', 1);
         $configuredBeach = $this->getConfiguration('plage', 'pontaillac');
         $beachOptions = '';

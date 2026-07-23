@@ -74,7 +74,7 @@
     setLoading(widget, true);
     domUtils.ajax({
       type: 'POST',
-      url: 'plugins/meteodesplages/core/ajax/meteodesplages.ajax.php',
+      url: '/plugins/meteodesplages/core/ajax/meteodesplages.ajax.php',
       dataType: 'json',
       global: false,
       data: {
