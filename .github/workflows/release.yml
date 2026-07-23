@@ -1,0 +1,66 @@
+name: Publier une version Jeedom
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Créer le ZIP et la Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Déterminer la version
+        id: version
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "archive=meteodesplages-jeedom-${GITHUB_REF_NAME}.zip" >> "$GITHUB_OUTPUT"
+
+      - name: Vérifier la syntaxe PHP
+        shell: bash
+        run: |
+          find . -type f -name '*.php' -not -path './.git/*' -print0 |
+          while IFS= read -r -d '' file; do
+            php -l "$file"
+          done
+
+      - name: Vérifier la version du plugin
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          INFO_VERSION="$(php -r '$j=json_decode(file_get_contents("plugin_info/info.json"), true); echo $j["pluginVersion"] ?? $j["version"] ?? "";')"
+
+          if [ "$INFO_VERSION" != "$VERSION" ]; then
+            echo "::error::plugin_info/info.json indique '$INFO_VERSION' au lieu de '$VERSION'."
+            exit 1
+          fi
+
+          if ! grep -Fq "const PLUGIN_VERSION = '$VERSION'" core/class/meteodesplages.class.php; then
+            echo "::error::La constante PLUGIN_VERSION n'est pas réglée sur '$VERSION'."
+            exit 1
+          fi
+
+      - name: Construire l'archive Jeedom
+        shell: bash
+        run: |
+          ARCHIVE="${{ steps.version.outputs.archive }}"
+
+          zip -r "$ARCHIVE"             core             data             desktop             docs             plugin_info             README.md             CHANGELOG.md             LICENSE             .gitignore
+
+          unzip -t "$ARCHIVE"
+
+      - name: Publier la Release GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "${GITHUB_REF_NAME}"             "${{ steps.version.outputs.archive }}"             --title "Météo des plages ${GITHUB_REF_NAME}"             --generate-notes
