@@ -15,6 +15,7 @@
 @media(max-width:460px){.mdp-tides{grid-template-columns:1fr 1fr}.mdp-grid{grid-template-columns:1fr}.mdp-section:last-child{grid-column:auto}.mdp-hero{padding:16px}.mdp-weather-icon{font-size:44px}.mdp-temp{font-size:39px}.mdp-title{font-size:19px}}
 .mdp-heading{display:flex;flex-direction:column;align-items:flex-start;gap:9px;min-width:0}.mdp-beach-picker{position:relative;margin:0}.mdp-beach-select{max-width:240px;height:32px;padding:4px 30px 4px 10px;border:1px solid rgba(255,255,255,.38);border-radius:10px;background:rgba(0,0,0,.28);color:#fff;font-size:13px;font-weight:650;outline:none;backdrop-filter:blur(5px);cursor:pointer}.mdp-beach-select:hover,.mdp-beach-select:focus{background:rgba(0,0,0,.42);border-color:rgba(255,255,255,.62)}.mdp-beach-select option{color:#183445;background:#fff}.meteodesplages-widget.mdp-loading .mdp-card{cursor:wait}.meteodesplages-widget.mdp-loading .mdp-card:after{content:"Chargement…";position:absolute;inset:auto 14px 14px auto;z-index:20;padding:7px 10px;border-radius:9px;background:rgba(0,0,0,.72);color:#fff;font-size:12px}.mdp-card{position:relative}
 @media(max-width:460px){.mdp-beach-select{max-width:190px}}
+.mdp-actions{position:relative;z-index:2;display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.mdp-action{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border:1px solid rgba(255,255,255,.42);border-radius:10px;background:rgba(0,0,0,.28);color:#fff!important;text-decoration:none!important;font-size:12px;font-weight:700;backdrop-filter:blur(5px);cursor:pointer}.mdp-action:hover,.mdp-action:focus{background:rgba(0,0,0,.44);border-color:rgba(255,255,255,.68);color:#fff!important;text-decoration:none!important}.mdp-action i{font-size:13px}
 </style>
 <div class="eqLogic-widget eqLogic meteodesplages-widget" data-eqType="meteodesplages" data-eqLogic_id="#id#" data-eqLogic_uid="#uid#" data-version="#version#">
   <div class="mdp-card">
@@ -41,6 +42,9 @@
           <div class="mdp-updated">Mise à jour : <span class="mdp-live-value " data-field="derniere_mise_a_jour" data-cmd-id="#cmd_derniere_mise_a_jour#">#derniere_mise_a_jour#</span></div>
         </div>
       </div>
+      <div class="mdp-actions">
+        <a class="mdp-action mdp-map-link" href="#" target="_blank" rel="noopener noreferrer" title="Voir la plage sur OpenStreetMap"><i class="fas fa-map-marker-alt"></i><span>Voir sur la carte</span></a>
+      </div>
     </div>
     <div class="mdp-grid"><div class="mdp-section"><div class="mdp-section-title">Atmosphère</div><div class="mdp-stats"><div class="mdp-stat"><div class="mdp-label">Ressentie</div><div class="mdp-value"><span class="mdp-symbol">🌡️</span><span class="mdp-live-value " data-field="temperature_ressentie" data-cmd-id="#cmd_temperature_ressentie#">#temperature_ressentie#</span><small> °C</small></div></div><div class="mdp-stat"><div class="mdp-label">Humidité</div><div class="mdp-value"><span class="mdp-symbol">💧</span><span class="mdp-live-value " data-field="humidite" data-cmd-id="#cmd_humidite#">#humidite#</span><small> %</small></div></div><div class="mdp-stat"><div class="mdp-label">Minimum</div><div class="mdp-value"><span class="mdp-symbol">↘️</span><span class="mdp-live-value " data-field="temperature_min" data-cmd-id="#cmd_temperature_min#">#temperature_min#</span><small> °C</small></div></div><div class="mdp-stat"><div class="mdp-label">Maximum</div><div class="mdp-value"><span class="mdp-symbol">↗️</span><span class="mdp-live-value " data-field="temperature_max" data-cmd-id="#cmd_temperature_max#">#temperature_max#</span><small> °C</small></div></div><div class="mdp-stat"><div class="mdp-label">Précipitations</div><div class="mdp-value"><span class="mdp-symbol">☔</span><span class="mdp-live-value " data-field="precipitations" data-cmd-id="#cmd_precipitations#">#precipitations#</span><small> mm</small></div></div><div class="mdp-stat"><div class="mdp-label">Indice UV</div><div class="mdp-value"><span class="mdp-symbol">☀️</span><span class="mdp-live-value " data-field="uv_max" data-cmd-id="#cmd_uv_max#">#uv_max#</span></div></div></div></div><div class="mdp-section"><div class="mdp-section-title">Vent</div><div class="mdp-stats"><div class="mdp-stat"><div class="mdp-label">Vitesse moyenne</div><div class="mdp-value"><span class="mdp-symbol">💨</span><span class="mdp-live-value " data-field="vent_vitesse" data-cmd-id="#cmd_vent_vitesse#">#vent_vitesse#</span><small> km/h</small></div></div><div class="mdp-stat"><div class="mdp-label">Rafales</div><div class="mdp-value"><span class="mdp-symbol">🌬️</span><span class="mdp-live-value " data-field="vent_rafales" data-cmd-id="#cmd_vent_rafales#">#vent_rafales#</span><small> km/h</small></div></div><div class="mdp-stat wide"><div class="mdp-label">Direction</div><div class="mdp-value"><span class="mdp-symbol">🧭</span><span class="mdp-live-value " data-field="vent_direction" data-cmd-id="#cmd_vent_direction#">#vent_direction#</span><small> °</small></div></div></div></div><div class="mdp-section"><div class="mdp-section-title">Mer &amp; houle</div><div class="mdp-stats"><div class="mdp-stat wide"><div class="mdp-label">Température de la mer</div><div class="mdp-value"><span class="mdp-symbol">🌊</span><span class="mdp-live-value " data-field="temperature_mer" data-cmd-id="#cmd_temperature_mer#">#temperature_mer#</span><small> °C</small></div></div><div class="mdp-stat"><div class="mdp-label">Vagues</div><div class="mdp-value"><span class="mdp-symbol">〰️</span><span class="mdp-live-value " data-field="vague_hauteur" data-cmd-id="#cmd_vague_hauteur#">#vague_hauteur#</span><small> m</small></div></div><div class="mdp-stat"><div class="mdp-label">Période vagues</div><div class="mdp-value"><span class="mdp-symbol">⏱️</span><span class="mdp-live-value " data-field="vague_periode" data-cmd-id="#cmd_vague_periode#">#vague_periode#</span><small> s</small></div></div><div class="mdp-stat"><div class="mdp-label">Houle</div><div class="mdp-value"><span class="mdp-symbol">🌊</span><span class="mdp-live-value " data-field="houle_hauteur" data-cmd-id="#cmd_houle_hauteur#">#houle_hauteur#</span><small> m</small></div></div><div class="mdp-stat"><div class="mdp-label">Période houle</div><div class="mdp-value"><span class="mdp-symbol">⏱️</span><span class="mdp-live-value " data-field="houle_periode" data-cmd-id="#cmd_houle_periode#">#houle_periode#</span><small> s</small></div></div><div class="mdp-stat wide"><div class="mdp-label">Risque de pluie</div><div class="mdp-value"><span class="mdp-symbol">🌧️</span><span class="mdp-live-value " data-field="risque_pluie" data-cmd-id="#cmd_risque_pluie#">#risque_pluie#</span><small> %</small></div></div></div></div></div>
     <div class="mdp-tides"><div class="mdp-tide"><div class="mdp-tide-type"><span data-tide-symbol="1">#maree_1_symbol#</span> <span class="mdp-live-value " data-field="maree_1_type" data-cmd-id="#cmd_maree_1_type#">#maree_1_type#</span></div><div class="mdp-tide-day"><span class="mdp-live-value " data-field="maree_1_jour" data-cmd-id="#cmd_maree_1_jour#">#maree_1_jour#</span></div><div class="mdp-tide-time"><span class="mdp-live-value " data-field="maree_1_heure" data-cmd-id="#cmd_maree_1_heure#">#maree_1_heure#</span></div><div class="mdp-tide-meta"><span class="mdp-live-value " data-field="maree_1_hauteur" data-cmd-id="#cmd_maree_1_hauteur#">#maree_1_hauteur#</span> m · coef. estimé <span class="mdp-live-value " data-field="maree_1_coefficient" data-cmd-id="#cmd_maree_1_coefficient#">#maree_1_coefficient#</span></div></div><div class="mdp-tide"><div class="mdp-tide-type"><span data-tide-symbol="2">#maree_2_symbol#</span> <span class="mdp-live-value " data-field="maree_2_type" data-cmd-id="#cmd_maree_2_type#">#maree_2_type#</span></div><div class="mdp-tide-day"><span class="mdp-live-value " data-field="maree_2_jour" data-cmd-id="#cmd_maree_2_jour#">#maree_2_jour#</span></div><div class="mdp-tide-time"><span class="mdp-live-value " data-field="maree_2_heure" data-cmd-id="#cmd_maree_2_heure#">#maree_2_heure#</span></div><div class="mdp-tide-meta"><span class="mdp-live-value " data-field="maree_2_hauteur" data-cmd-id="#cmd_maree_2_hauteur#">#maree_2_hauteur#</span> m · coef. estimé <span class="mdp-live-value " data-field="maree_2_coefficient" data-cmd-id="#cmd_maree_2_coefficient#">#maree_2_coefficient#</span></div></div><div class="mdp-tide"><div class="mdp-tide-type"><span data-tide-symbol="3">#maree_3_symbol#</span> <span class="mdp-live-value " data-field="maree_3_type" data-cmd-id="#cmd_maree_3_type#">#maree_3_type#</span></div><div class="mdp-tide-day"><span class="mdp-live-value " data-field="maree_3_jour" data-cmd-id="#cmd_maree_3_jour#">#maree_3_jour#</span></div><div class="mdp-tide-time"><span class="mdp-live-value " data-field="maree_3_heure" data-cmd-id="#cmd_maree_3_heure#">#maree_3_heure#</span></div><div class="mdp-tide-meta"><span class="mdp-live-value " data-field="maree_3_hauteur" data-cmd-id="#cmd_maree_3_hauteur#">#maree_3_hauteur#</span> m · coef. estimé <span class="mdp-live-value " data-field="maree_3_coefficient" data-cmd-id="#cmd_maree_3_coefficient#">#maree_3_coefficient#</span></div></div><div class="mdp-tide"><div class="mdp-tide-type"><span data-tide-symbol="4">#maree_4_symbol#</span> <span class="mdp-live-value " data-field="maree_4_type" data-cmd-id="#cmd_maree_4_type#">#maree_4_type#</span></div><div class="mdp-tide-day"><span class="mdp-live-value " data-field="maree_4_jour" data-cmd-id="#cmd_maree_4_jour#">#maree_4_jour#</span></div><div class="mdp-tide-time"><span class="mdp-live-value " data-field="maree_4_heure" data-cmd-id="#cmd_maree_4_heure#">#maree_4_heure#</span></div><div class="mdp-tide-meta"><span class="mdp-live-value " data-field="maree_4_hauteur" data-cmd-id="#cmd_maree_4_hauteur#">#maree_4_hauteur#</span> m · coef. estimé <span class="mdp-live-value " data-field="maree_4_coefficient" data-cmd-id="#cmd_maree_4_coefficient#">#maree_4_coefficient#</span></div></div></div>
@@ -50,6 +54,30 @@
 <script>
 (function () {
   'use strict';
+
+
+  var BEACH_COORDINATES = {
+    pontaillac: [45.6267, -1.0518],
+    grande_conche: [45.6184, -1.0208],
+    foncillon: [45.6229, -1.0364],
+    le_chay: [45.6265, -1.0427],
+    pigeonnier: [45.6295, -1.0481],
+    nauzan: [45.6388, -1.0725],
+    saint_georges: [45.6038, -1.0009]
+  };
+
+  function updateMapLink(widget, beachKey) {
+    var link = widget.querySelector('.mdp-map-link');
+    var coordinates = BEACH_COORDINATES[beachKey];
+    if (!link || !coordinates) {
+      if (link) link.style.display = 'none';
+      return;
+    }
+    var latitude = coordinates[0];
+    var longitude = coordinates[1];
+    link.href = 'https://www.openstreetmap.org/?mlat=' + encodeURIComponent(latitude) + '&mlon=' + encodeURIComponent(longitude) + '#map=16/' + latitude + '/' + longitude;
+    link.style.display = 'inline-flex';
+  }
 
   function weatherIcon(code) {
     code = parseInt(code, 10);
@@ -208,6 +236,9 @@
     bindSelector(widget);
     bindRefresh(widget);
     bindLiveValues(widget);
+    updateMapLink(widget, getSelectedBeach(widget));
+    var mapLink = widget.querySelector('.mdp-map-link');
+    if (mapLink) mapLink.addEventListener('click', function (event) { event.stopPropagation(); });
   }
 
   function initAll(root) {
