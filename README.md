@@ -1,47 +1,39 @@
-# Météo des plages
+# Météo des plages pour Jeedom
 
-Plugin Jeedom dédié à la météo des plages.
+Plugin Jeedom affichant la météo terrestre, les conditions marines et les prochaines marées dans un widget responsive.
 
-## Fonctionnalités actuelles
+## Fonctionnalités
 
-- météo Open-Meteo ;
-- température de l’air ;
-- température de l’eau ;
-- vent ;
-- indice UV ;
-- précipitations ;
-- état de la mer ;
-- estimation des marées ;
-- affichage Jeedom sur ordinateur et mobile.
-
-## Installation
-
-Le plugin peut être installé depuis GitHub ou depuis une archive ZIP.
-
-## Configuration
-
-1. Installer le plugin.
-2. L’activer dans Jeedom.
-3. Créer un équipement.
-4. Choisir une plage ou renseigner les coordonnées.
-5. Sauvegarder puis rafraîchir les données.
-
-## Sources de données
-
-- Open-Meteo
-- Open-Meteo Marine
-
-Les données de marée actuellement affichées sont des estimations. Le SHOM reste la référence officielle pour la navigation et les horaires réglementaires.
+- météo actuelle, températures minimale et maximale ;
+- température ressentie, humidité, précipitations, risque de pluie et indice UV ;
+- vitesse, direction et rafales du vent ;
+- température de la mer, hauteur, période et direction des vagues et de la houle ;
+- quatre prochaines marées modélisées ;
+- plages prédéfinies autour de Royan ou coordonnées personnalisées ;
+- image de fond personnalisable ;
+- actualisation automatique toutes les 30 minutes et rafraîchissement manuel intégré.
 
 ## Compatibilité
 
-- Jeedom 4.6 et versions récentes
-- PHP 8.x
+- Jeedom 4.4 ou supérieur ;
+- aucune clé API nécessaire ;
+- données fournies par Open-Meteo et Open-Meteo Marine.
 
-## Auteur
+## Installation et mises à jour depuis GitHub
 
-Eric Boinaud
+Dans Jeedom, ouvrez **Réglages → Système → Centre de mise à jour**, puis ajoutez une source GitHub :
+
+- **ID logique** : `meteodesplages`
+- **Utilisateur** : `EricBoinaud`
+- **Dépôt** : `meteodesplages`
+- **Branche** : `main`
+
+Le contenu du plugin doit être placé directement à la racine du dépôt : `core`, `desktop`, `docs`, `plugin_info`, etc.
+
+## Avertissement sur les marées
+
+Les horaires, hauteurs et coefficients affichés sont issus d’un modèle et restent indicatifs. Ils ne doivent pas être utilisés pour la navigation. Le SHOM demeure la référence officielle.
 
 ## Licence
 
-AGPL-3.0
+AGPL-3.0-or-later.

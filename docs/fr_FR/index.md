@@ -1,46 +1,25 @@
 # Météo des plages
 
-Plugin Jeedom affichant la météo et l'état de la mer d'une plage grâce aux API Open-Meteo, sans clé API.
+## Présentation
 
-## Installation
+Météo des plages affiche dans Jeedom la météo terrestre, les conditions marines et les prochaines marées d’une plage.
 
-1. Installez le plugin puis activez-le.
-2. Ouvrez **Plugins > Météo > Météo des plages**.
-3. Ajoutez un équipement nommé **Pontaillac**.
-4. Laissez les coordonnées proposées : latitude `45.6267`, longitude `-1.0518`.
-5. Activez et rendez visible l'équipement, puis sauvegardez.
-6. Cliquez sur la commande **Rafraîchir** pour obtenir immédiatement les premières valeurs.
+## Création d’un équipement
 
-Le plugin se met ensuite à jour toutes les 30 minutes.
+1. Ouvrez **Plugins → Météo → Météo des plages**.
+2. Cliquez sur **Ajouter**.
+3. Donnez un nom à l’équipement.
+4. Choisissez une plage prédéfinie ou **Coordonnées personnalisées**.
+5. Activez et rendez visible l’équipement, puis cliquez sur **Sauvegarder**.
 
-## Données disponibles
+## Actualisation
 
-Température extérieure et ressentie, humidité, conditions, vent et rafales, précipitations, UV, températures minimale et maximale, risque de pluie, température de la mer, hauteur/période/direction des vagues et de la houle.
+Les données sont actualisées automatiquement toutes les 30 minutes. L’icône de rafraîchissement du widget permet également une mise à jour manuelle sans recharger complètement le tableau de bord.
 
-## Remarque
+## Sources de données
 
-Les données marines sont des estimations issues de modèles. Elles ne remplacent pas les bulletins officiels pour la navigation ou la sécurité en mer.
+Le plugin utilise Open-Meteo pour la météo terrestre et Open-Meteo Marine pour les données marines et les marées modélisées. Aucune clé API n’est nécessaire.
 
+## Avertissement
 
-## Widget version 2
-
-Le widget responsive regroupe la météo, le vent, les vagues, la houle et la température de la mer dans une carte moderne. Il s'adapte au tableau de bord sur ordinateur, tablette et téléphone.
-
-
-## Version 2.1.0
-
-- choix rapide parmi plusieurs plages de Royan Atlantique ;
-- image intégrée pour Pontaillac ;
-- URL d’image personnalisable ;
-- quatre prochaines marées, hauteurs et coefficients estimés.
-
-Les horaires et coefficients sont calculés à partir du niveau marin modélisé par Open-Meteo. Ils sont indicatifs et ne doivent pas être utilisés pour la navigation.
-
-
-## Version 2.4.0
-- Ajout du jour/date sur chaque prochaine marée.
-- Mention plus explicite du caractère modélisé des marées Open-Meteo.
-
-
-## Marées officielles SHOM
-Dans l’équipement, choisissez **Source des marées → SHOM — vignette officielle**, puis indiquez le code du port (par défaut `ROYAN`). Le widget affiche alors la grande vignette officielle du SHOM avec jours, heures, hauteurs et coefficients.
+Les horaires, hauteurs et coefficients de marée sont des estimations. Ils ne doivent pas être utilisés pour la navigation. Consultez le SHOM pour les prédictions officielles.

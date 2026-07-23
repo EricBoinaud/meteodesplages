@@ -1,8 +1,4 @@
 <?php
-
-require_once __DIR__ . '/Utils/WeatherFormatter.php';
-require_once __DIR__ . '/Repository/BeachRepository.php';
-require_once __DIR__ . '/Provider/OpenMeteoProvider.php';
 /* This file is part of Jeedom.
  *
  * Jeedom is free software: you can redistribute it and/or modify
@@ -13,11 +9,18 @@ require_once __DIR__ . '/Provider/OpenMeteoProvider.php';
 
 class meteodesplages extends eqLogic {
 
-    const PLUGIN_VERSION = '3.1.0';
+    const PLUGIN_VERSION = '1.0.0';
 
-    private static function beachPresets(): array
-    {
-        return BeachRepository::all();
+    private static function beachPresets() {
+        return [
+            'pontaillac' => ['latitude' => '45.6267', 'longitude' => '-1.0518', 'image' => 'plugins/meteodesplages/data/images/pontaillac.webp'],
+            'grande_conche' => ['latitude' => '45.6184', 'longitude' => '-1.0208', 'image' => ''],
+            'foncillon' => ['latitude' => '45.6229', 'longitude' => '-1.0364', 'image' => ''],
+            'le_chay' => ['latitude' => '45.6265', 'longitude' => '-1.0427', 'image' => ''],
+            'pigeonnier' => ['latitude' => '45.6295', 'longitude' => '-1.0481', 'image' => ''],
+            'nauzan' => ['latitude' => '45.6388', 'longitude' => '-1.0725', 'image' => ''],
+            'saint_georges' => ['latitude' => '45.6038', 'longitude' => '-1.0009', 'image' => '']
+        ];
     }
 
     public function preSave() {
@@ -146,6 +149,54 @@ class meteodesplages extends eqLogic {
         $refresh->save();
     }
 
+    private function getJson($url, $maxAttempts = 3) {
+        $lastError = 'Erreur inconnue';
+
+        for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+            $ch = curl_init();
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $url,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_TIMEOUT => 25,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_USERAGENT => 'Jeedom-MeteoDesPlages/' . self::PLUGIN_VERSION,
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_SSL_VERIFYHOST => 2
+            ]);
+
+            $body = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($body !== false && $curlError === '' && $httpCode >= 200 && $httpCode < 300) {
+                $json = json_decode($body, true);
+                if (!is_array($json)) {
+                    throw new Exception('Réponse JSON invalide');
+                }
+                if (!empty($json['error'])) {
+                    throw new Exception(isset($json['reason']) ? $json['reason'] : 'Erreur renvoyée par Open-Meteo');
+                }
+                return $json;
+            }
+
+            if ($curlError !== '') {
+                $lastError = 'Erreur réseau : ' . $curlError;
+            } else {
+                $lastError = 'Réponse HTTP ' . $httpCode;
+            }
+
+            $retryable = ($curlError !== '') || $httpCode === 429 || $httpCode >= 500;
+            if (!$retryable || $attempt >= $maxAttempts) {
+                break;
+            }
+
+            usleep(300000 * $attempt);
+        }
+
+        throw new Exception($lastError . ' après ' . $maxAttempts . ' tentative(s)');
+    }
 
     private function updateValue($logicalId, $value, $allowEmpty = false) {
         if (!$allowEmpty && ($value === null || $value === '')) {
@@ -157,9 +208,18 @@ class meteodesplages extends eqLogic {
         }
     }
 
-    private function weatherText($code): string
-    {
-        return WeatherFormatter::weatherText($code);
+    private function weatherText($code) {
+        $labels = [
+            0 => 'Ciel dégagé', 1 => 'Plutôt dégagé', 2 => 'Partiellement nuageux', 3 => 'Couvert',
+            45 => 'Brouillard', 48 => 'Brouillard givrant', 51 => 'Bruine faible', 53 => 'Bruine',
+            55 => 'Bruine forte', 56 => 'Bruine verglaçante faible', 57 => 'Bruine verglaçante forte',
+            61 => 'Pluie faible', 63 => 'Pluie', 65 => 'Pluie forte', 66 => 'Pluie verglaçante faible',
+            67 => 'Pluie verglaçante forte', 71 => 'Neige faible', 73 => 'Neige', 75 => 'Neige forte',
+            77 => 'Grains de neige', 80 => 'Averses faibles', 81 => 'Averses', 82 => 'Averses fortes',
+            85 => 'Averses de neige faibles', 86 => 'Averses de neige fortes', 95 => 'Orage',
+            96 => 'Orage avec grêle faible', 99 => 'Orage avec forte grêle'
+        ];
+        return isset($labels[(int)$code]) ? $labels[(int)$code] : 'Code météo ' . (int)$code;
     }
 
     private function extractTides($marine) {
@@ -265,6 +325,31 @@ class meteodesplages extends eqLogic {
         return $days[(int)date('w', $timestamp)] . ' ' . date('d/m', $timestamp);
     }
 
+    private function getTideJson($latitude, $longitude) {
+        $base = [
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'timezone' => 'Europe/Paris',
+            'forecast_days' => 4,
+            'past_days' => 1,
+            'cell_selection' => 'sea'
+        ];
+
+        // La série 15 minutes est prioritaire. En cas d'indisponibilité, repli sur l'horaire.
+        try {
+            $params = $base;
+            $params['minutely_15'] = 'sea_level_height_msl';
+            $params['forecast_minutely_15'] = 384;
+            $params['past_minutely_15'] = 96;
+            return $this->getJson('https://marine-api.open-meteo.com/v1/marine?' . http_build_query($params));
+        } catch (Throwable $e) {
+            log::add('meteodesplages', 'warning', $this->getHumanName() . ' : marées 15 min indisponibles, repli horaire : ' . $e->getMessage());
+        }
+
+        $params = $base;
+        $params['hourly'] = 'sea_level_height_msl';
+        return $this->getJson('https://marine-api.open-meteo.com/v1/marine?' . http_build_query($params));
+    }
 
     public function refresh() {
         $latitude = trim($this->getConfiguration('latitude', '45.6267'));
@@ -273,11 +358,27 @@ class meteodesplages extends eqLogic {
             throw new Exception('Latitude ou longitude invalide');
         }
 
-        $provider = new OpenMeteoProvider();
+        $weatherUrl = 'https://api.open-meteo.com/v1/forecast?' . http_build_query([
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'current' => 'temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation',
+            'daily' => 'uv_index_max,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
+            'timezone' => 'Europe/Paris',
+            'forecast_days' => 1
+        ]);
 
-        $weather = $provider->getWeather($latitude, $longitude);
-        $marine = $provider->getMarine($latitude, $longitude);
-        $tideMarine = $provider->getTides($latitude, $longitude);
+        $marineUrl = 'https://marine-api.open-meteo.com/v1/marine?' . http_build_query([
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'current' => 'wave_height,wave_direction,wave_period,swell_wave_height,swell_wave_direction,swell_wave_period,sea_surface_temperature',
+            'timezone' => 'Europe/Paris',
+            'forecast_days' => 3,
+            'cell_selection' => 'sea'
+        ]);
+
+        $weather = $this->getJson($weatherUrl);
+        $marine = $this->getJson($marineUrl);
+        $tideMarine = $this->getTideJson($latitude, $longitude);
 
         $current = isset($weather['current']) ? $weather['current'] : [];
         $daily = isset($weather['daily']) ? $weather['daily'] : [];
@@ -376,7 +477,7 @@ class meteodesplages extends eqLogic {
         $imageCss = htmlspecialchars($image, ENT_QUOTES, 'UTF-8');
 
         $fields = [
-            'temperature_air','temperature_ressentie','humidite','condition','vent_vitesse','vent_rafales','vent_direction',
+            'code_meteo','temperature_air','temperature_ressentie','humidite','condition','vent_vitesse','vent_rafales','vent_direction',
             'precipitations','uv_max','temperature_max','temperature_min','risque_pluie','temperature_mer','vague_hauteur',
             'vague_periode','vague_direction','houle_hauteur','houle_periode','houle_direction',
             'maree_1_type','maree_1_jour','maree_1_heure','maree_1_hauteur','maree_1_coefficient',
@@ -392,16 +493,26 @@ class meteodesplages extends eqLogic {
         .mdp-hero{position:relative;padding:18px 20px 16px;color:white;background-image:linear-gradient(90deg,rgba(5,42,61,.58),rgba(5,75,95,.16)),url("'.$imageCss.'");background-size:cover;background-position:center;overflow:hidden;min-height:245px}
         .mdp-hero:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.12));pointer-events:none}
         .mdp-top{position:relative;z-index:2;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+        .mdp-settings-zone{display:block;flex:1;min-width:0;color:inherit;text-decoration:none;cursor:pointer}.mdp-settings-zone:hover,.mdp-settings-zone:focus{color:inherit;text-decoration:none}
         .mdp-title{font-size:25px;font-weight:750;line-height:1.05;text-transform:uppercase;letter-spacing:.4px}.mdp-sub{font-size:13px;opacity:.88;margin-top:6px}
-        .mdp-refresh{border:1px solid rgba(255,255,255,.55);background:rgba(0,0,0,.14);color:#fff;border-radius:12px;padding:7px 11px;cursor:pointer;font-size:13px}.mdp-refresh:hover{background:rgba(0,0,0,.25)}
+        .mdp-refresh{margin:0!important;border:0!important;background:rgba(0,0,0,.28)!important;color:#fff!important;border-radius:10px!important;width:34px;height:34px;padding:0!important;display:flex;align-items:center;justify-content:center;cursor:pointer}.mdp-refresh:hover{background:rgba(0,0,0,.42)!important}.mdp-refresh:disabled{opacity:.65;cursor:wait}
         .mdp-main{position:relative;z-index:2;display:flex;align-items:center;gap:14px;margin-top:16px}.mdp-weather-icon{font-size:54px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.18))}.mdp-temp{font-size:52px;font-weight:750;line-height:.95}.mdp-temp small{font-size:21px;font-weight:500}.mdp-condition{font-size:15px;margin-top:5px}.mdp-updated{font-size:11px;opacity:.82;margin-top:5px}
         .mdp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px}.mdp-section{background:rgba(255,255,255,.84);border:1px solid rgba(20,105,135,.12);border-radius:14px;padding:12px;box-shadow:0 3px 10px rgba(20,80,105,.07)}
         .mdp-section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#167a9d;margin-bottom:10px}.mdp-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.mdp-stat{min-width:0}.mdp-stat.wide{grid-column:1/-1}.mdp-label{font-size:10px;color:#69818e;margin-bottom:2px}.mdp-value{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mdp-value small{font-size:11px;font-weight:500;color:#5d7785}.mdp-symbol{font-size:17px;margin-right:4px}.mdp-tides{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0 12px 12px}.mdp-tide{background:rgba(255,255,255,.88);border:1px solid rgba(20,105,135,.14);border-radius:14px;padding:10px;text-align:center}.mdp-tide-type{font-size:11px;color:#167a9d;font-weight:800;text-transform:uppercase}.mdp-tide-day{font-size:11px;color:#607d8b;font-weight:650;margin-top:3px}.mdp-tide-time{font-size:22px;font-weight:750;margin:3px 0}.mdp-tide-meta{font-size:11px;color:#607d8b}.mdp-footer{padding:0 14px 12px;text-align:center;color:#78909b;font-size:10px}
         @media(max-width:720px){.mdp-tides{grid-template-columns:1fr 1fr}.mdp-grid{grid-template-columns:1fr 1fr}.mdp-section:last-child{grid-column:1/-1}.mdp-title{font-size:21px}.mdp-temp{font-size:44px}}
-        @media(max-width:460px){.mdp-tides{grid-template-columns:1fr 1fr}.mdp-grid{grid-template-columns:1fr}.mdp-section:last-child{grid-column:auto}.mdp-hero{padding:16px}.mdp-weather-icon{font-size:44px}.mdp-temp{font-size:39px}.mdp-refresh{padding:6px 8px}.mdp-title{font-size:19px}}
+        @media(max-width:460px){.mdp-tides{grid-template-columns:1fr 1fr}.mdp-grid{grid-template-columns:1fr}.mdp-section:last-child{grid-column:auto}.mdp-hero{padding:16px}.mdp-weather-icon{font-size:44px}.mdp-temp{font-size:39px}.mdp-title{font-size:19px}}
         </style>';
-        $html .= '<div class="mdp-card"><div class="mdp-hero"><div class="mdp-top"><div><div class="mdp-title">'.$name.'</div><div class="mdp-sub">Météo de la plage</div></div><button class="mdp-refresh" onclick="jeedom.cmd.execute({id:'.$refreshId.',success:function(){setTimeout(function(){window.location.reload();},900);}})"><i class="fas fa-sync-alt"></i> Rafraîchir</button></div>';
-        $html .= '<div class="mdp-main"><div class="mdp-weather-icon">'.$icon.'</div><div><div class="mdp-temp"><span id="mdp-'.$id.'-temperature_air">'.$v('temperature_air').'</span><small> °C</small></div><div class="mdp-condition" id="mdp-'.$id.'-condition">'.$v('condition').'</div><div class="mdp-updated">Mise à jour : <span id="mdp-'.$id.'-derniere_mise_a_jour">'.$v('derniere_mise_a_jour').'</span></div></div></div></div>';
+        $html .= '<div class="mdp-card"><div class="mdp-hero"><div class="mdp-top">'
+            .'<div class="mdp-settings-zone eqLogicName cursor" data-eqlogic_id="'.$id.'" title="Ouvrir les réglages">'
+                .'<div class="mdp-title">'.$name.'</div>'
+                .'<div class="mdp-sub">Météo de la plage</div>'
+            .'</div>'
+            .'<button type="button" class="btn btn-default btn-sm mdp-refresh" title="Rafraîchir" aria-label="Rafraîchir" '
+                .'onclick="event.stopPropagation();var b=this,i=b.querySelector(\'i\');if('.$refreshId.'<=0){if(typeof toastr!==\'undefined\'){toastr.error(\'Commande Rafraîchir introuvable\');}return;}b.disabled=true;i.classList.add(\'fa-spin\');jeedom.cmd.execute({id:'.$refreshId.',success:function(){setTimeout(function(){i.classList.remove(\'fa-spin\');b.disabled=false;},600);},error:function(){i.classList.remove(\'fa-spin\');b.disabled=false;if(typeof toastr!==\'undefined\'){toastr.error(\'Échec du rafraîchissement\');}}});">'
+                .'<i class="fas fa-sync-alt"></i>'
+            .'</button>'
+        .'</div>';
+        $html .= '<div class="mdp-main"><div class="mdp-weather-icon" id="mdp-'.$id.'-weather-icon">'.$icon.'</div><div><div class="mdp-temp"><span id="mdp-'.$id.'-temperature_air">'.$v('temperature_air').'</span><small> °C</small></div><div class="mdp-condition" id="mdp-'.$id.'-condition">'.$v('condition').'</div><div class="mdp-updated">Mise à jour : <span id="mdp-'.$id.'-derniere_mise_a_jour">'.$v('derniere_mise_a_jour').'</span></div></div></div></div>';
 
         $section = function($title, $items) use ($id, $v) {
             $out = '<div class="mdp-section"><div class="mdp-section-title">'.$title.'</div><div class="mdp-stats">';
@@ -431,15 +542,23 @@ class meteodesplages extends eqLogic {
         for ($i = 1; $i <= 4; $i++) {
             $type = $v('maree_'.$i.'_type');
             $symbol = ($type === 'Haute') ? '🌊' : '🏖️';
-            $html .= '<div class="mdp-tide"><div class="mdp-tide-type">'.$symbol.' <span id="mdp-'.$id.'-maree_'.$i.'_type">'.$type.'</span></div><div class="mdp-tide-day" id="mdp-'.$id.'-maree_'.$i.'_jour">'.$v('maree_'.$i.'_jour').'</div><div class="mdp-tide-time" id="mdp-'.$id.'-maree_'.$i.'_heure">'.$v('maree_'.$i.'_heure').'</div><div class="mdp-tide-meta"><span id="mdp-'.$id.'-maree_'.$i.'_hauteur">'.$v('maree_'.$i.'_hauteur').'</span> m · coef. estimé <span id="mdp-'.$id.'-maree_'.$i.'_coefficient">'.$v('maree_'.$i.'_coefficient').'</span></div></div>';
+            $html .= '<div class="mdp-tide"><div class="mdp-tide-type"><span id="mdp-'.$id.'-maree_'.$i.'_symbol">'.$symbol.'</span> <span id="mdp-'.$id.'-maree_'.$i.'_type">'.$type.'</span></div><div class="mdp-tide-day" id="mdp-'.$id.'-maree_'.$i.'_jour">'.$v('maree_'.$i.'_jour').'</div><div class="mdp-tide-time" id="mdp-'.$id.'-maree_'.$i.'_heure">'.$v('maree_'.$i.'_heure').'</div><div class="mdp-tide-meta"><span id="mdp-'.$id.'-maree_'.$i.'_hauteur">'.$v('maree_'.$i.'_hauteur').'</span> m · coef. estimé <span id="mdp-'.$id.'-maree_'.$i.'_coefficient">'.$v('maree_'.$i.'_coefficient').'</span></div></div>';
         }
         $html .= '</div><div class="mdp-footer">Données Open-Meteo — marées modélisées : horaires, hauteurs et coefficients estimés. Référence officielle pour la navigation : SHOM.</div></div>';
 
         $html .= '<script>(function(){';
+        $html .= 'function mdpWeatherIcon(code){code=parseInt(code,10);if(code===0)return "☀️";if(code===1||code===2)return "🌤️";if(code===3)return "☁️";if(code===45||code===48)return "🌫️";if([51,53,55,56,57,61,63,65,66,67,80,81,82].indexOf(code)!==-1)return "🌧️";if([71,73,75,77,85,86].indexOf(code)!==-1)return "❄️";if([95,96,99].indexOf(code)!==-1)return "⛈️";return "🌤️";}';
         foreach ($fields as $logicalId) {
             $cid = $cmdId($logicalId);
             if ($cid > 0) {
-                $html .= 'jeedom.cmd.addUpdateFunction('.$cid.',function(_options){var e=document.getElementById("mdp-'.$id.'-'.$logicalId.'");if(e){e.textContent=_options.display_value;}});';
+                if ($logicalId === 'code_meteo') {
+                    $html .= 'jeedom.cmd.addUpdateFunction('.$cid.',function(_options){var e=document.getElementById("mdp-'.$id.'-weather-icon");if(e){e.textContent=mdpWeatherIcon(_options.display_value);}});';
+                } elseif (preg_match('/^maree_([1-4])_type$/', $logicalId, $matches)) {
+                    $tideIndex = (int) $matches[1];
+                    $html .= 'jeedom.cmd.addUpdateFunction('.$cid.',function(_options){var e=document.getElementById("mdp-'.$id.'-'.$logicalId.'"),s=document.getElementById("mdp-'.$id.'-maree_'.$tideIndex.'_symbol");if(e){e.textContent=_options.display_value;}if(s){s.textContent=(_options.display_value==="Haute")?"🌊":"🏖️";}});';
+                } else {
+                    $html .= 'jeedom.cmd.addUpdateFunction('.$cid.',function(_options){var e=document.getElementById("mdp-'.$id.'-'.$logicalId.'");if(e){e.textContent=_options.display_value;}});';
+                }
             }
         }
         $html .= '})();</script></div>';

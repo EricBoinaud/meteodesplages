@@ -1,22 +1,17 @@
-# Historique des versions
+# Journal des modifications
 
-## 3.1.0
+## 1.0.0 — 23 juillet 2026
 
-- suppression de l’intégration SHOM par iframe ;
-- retour aux marées estimées Open-Meteo ;
-- affichage du jour pour les prochaines marées ;
-- amélioration de la stabilité générale.
+Première version publique GitHub.
 
-## 3.0.0
+- météo actuelle et prévisions quotidiennes via Open-Meteo ;
+- température ressentie, humidité, pluie, UV, vent et rafales ;
+- température de la mer, vagues et houle via Open-Meteo Marine ;
+- quatre prochaines marées modélisées avec jour, heure, hauteur et coefficient estimé ;
+- plages prédéfinies autour de Royan et coordonnées personnalisées ;
+- image de fond personnalisable ;
+- widget responsive avec bandeau ouvrant les réglages Jeedom ;
+- rafraîchissement direct sans rechargement complet du tableau de bord ;
+- nouvelles tentatives automatiques en cas d’erreur temporaire des services Open-Meteo.
 
-- ajout du choix de plage ;
-- amélioration de la configuration ;
-- ajout des métadonnées de version ;
-- préparation de la publication GitHub.
-
-## 2.x
-
-- ajout des données marines ;
-- ajout de la température de l’eau ;
-- ajout de la houle et des marées estimées ;
-- amélioration progressive du widget.
+> Les informations de marée sont des estimations et ne remplacent pas les prédictions officielles du SHOM.
