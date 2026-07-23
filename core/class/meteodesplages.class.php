@@ -396,9 +396,7 @@ class meteodesplages extends eqLogic {
         return $this->getJson('https://marine-api.open-meteo.com/v1/marine?' . http_build_query($params));
     }
 
-    public function refresh() {
-        $latitude = trim($this->getConfiguration('latitude', '45.6267'));
-        $longitude = trim($this->getConfiguration('longitude', '-1.0518'));
+    private function fetchBeachData($latitude, $longitude) {
         if (!is_numeric($latitude) || !is_numeric($longitude)) {
             throw new Exception('Latitude ou longitude invalide');
         }
@@ -425,53 +423,81 @@ class meteodesplages extends eqLogic {
         $marine = $this->getJson($marineUrl);
         $tideMarine = $this->getTideJson($latitude, $longitude);
 
-        $current = isset($weather['current']) ? $weather['current'] : [];
-        $daily = isset($weather['daily']) ? $weather['daily'] : [];
-        $sea = isset($marine['current']) ? $marine['current'] : [];
+        $current = $weather['current'] ?? [];
+        $daily = $weather['daily'] ?? [];
+        $sea = $marine['current'] ?? [];
+        $code = $current['weather_code'] ?? null;
 
-        $code = isset($current['weather_code']) ? $current['weather_code'] : null;
-        $this->updateValue('temperature_air', $current['temperature_2m'] ?? null);
-        $this->updateValue('temperature_ressentie', $current['apparent_temperature'] ?? null);
-        $this->updateValue('humidite', $current['relative_humidity_2m'] ?? null);
-        $this->updateValue('code_meteo', $code);
-        if ($code !== null) {
-            $this->updateValue('condition', $this->weatherText($code));
-        }
-        $this->updateValue('vent_vitesse', $current['wind_speed_10m'] ?? null);
-        $this->updateValue('vent_rafales', $current['wind_gusts_10m'] ?? null);
-        $this->updateValue('vent_direction', $current['wind_direction_10m'] ?? null);
-        $this->updateValue('precipitations', $current['precipitation'] ?? null);
-        $this->updateValue('uv_max', $daily['uv_index_max'][0] ?? null);
-        $this->updateValue('temperature_max', $daily['temperature_2m_max'][0] ?? null);
-        $this->updateValue('temperature_min', $daily['temperature_2m_min'][0] ?? null);
-        $this->updateValue('risque_pluie', $daily['precipitation_probability_max'][0] ?? null);
-
-        $this->updateValue('temperature_mer', $sea['sea_surface_temperature'] ?? null);
-        $this->updateValue('vague_hauteur', $sea['wave_height'] ?? null);
-        $this->updateValue('vague_periode', $sea['wave_period'] ?? null);
-        $this->updateValue('vague_direction', $sea['wave_direction'] ?? null);
-        $this->updateValue('houle_hauteur', $sea['swell_wave_height'] ?? null);
-        $this->updateValue('houle_periode', $sea['swell_wave_period'] ?? null);
-        $this->updateValue('houle_direction', $sea['swell_wave_direction'] ?? null);
+        $data = [
+            'temperature_air' => $current['temperature_2m'] ?? null,
+            'temperature_ressentie' => $current['apparent_temperature'] ?? null,
+            'humidite' => $current['relative_humidity_2m'] ?? null,
+            'code_meteo' => $code,
+            'condition' => $code === null ? '—' : $this->weatherText($code),
+            'vent_vitesse' => $current['wind_speed_10m'] ?? null,
+            'vent_rafales' => $current['wind_gusts_10m'] ?? null,
+            'vent_direction' => $current['wind_direction_10m'] ?? null,
+            'precipitations' => $current['precipitation'] ?? null,
+            'uv_max' => $daily['uv_index_max'][0] ?? null,
+            'temperature_max' => $daily['temperature_2m_max'][0] ?? null,
+            'temperature_min' => $daily['temperature_2m_min'][0] ?? null,
+            'risque_pluie' => $daily['precipitation_probability_max'][0] ?? null,
+            'temperature_mer' => $sea['sea_surface_temperature'] ?? null,
+            'vague_hauteur' => $sea['wave_height'] ?? null,
+            'vague_periode' => $sea['wave_period'] ?? null,
+            'vague_direction' => $sea['wave_direction'] ?? null,
+            'houle_hauteur' => $sea['swell_wave_height'] ?? null,
+            'houle_periode' => $sea['swell_wave_period'] ?? null,
+            'houle_direction' => $sea['swell_wave_direction'] ?? null,
+            'derniere_mise_a_jour' => date('d/m/Y H:i:s')
+        ];
 
         $tides = is_array($tideMarine) ? $this->extractTides($tideMarine) : [];
         for ($i = 1; $i <= 4; $i++) {
             $event = $tides[$i - 1] ?? null;
-            if ($event) {
-                $this->updateValue('maree_'.$i.'_type', $event['type']);
-                $this->updateValue('maree_'.$i.'_jour', $event['day']);
-                $this->updateValue('maree_'.$i.'_heure', $event['time']);
-                $this->updateValue('maree_'.$i.'_hauteur', $event['height']);
-                $this->updateValue('maree_'.$i.'_coefficient', $event['coefficient'] === null ? '—' : $event['coefficient'], true);
-            } else {
-                $this->updateValue('maree_'.$i.'_type', 'Indisponible', true);
-                $this->updateValue('maree_'.$i.'_jour', '—', true);
-                $this->updateValue('maree_'.$i.'_heure', '—', true);
-                $this->updateValue('maree_'.$i.'_hauteur', '—', true);
-                $this->updateValue('maree_'.$i.'_coefficient', '—', true);
-            }
+            $data['maree_' . $i . '_type'] = $event['type'] ?? 'Indisponible';
+            $data['maree_' . $i . '_jour'] = $event['day'] ?? '—';
+            $data['maree_' . $i . '_heure'] = $event['time'] ?? '—';
+            $data['maree_' . $i . '_hauteur'] = $event['height'] ?? '—';
+            $data['maree_' . $i . '_coefficient'] = isset($event['coefficient']) && $event['coefficient'] !== null ? $event['coefficient'] : '—';
         }
-        $this->updateValue('derniere_mise_a_jour', date('d/m/Y H:i:s'));
+
+        return $data;
+    }
+
+    public function getBeachData($beachKey) {
+        $preset = self::getBeachPreset($beachKey);
+        if (!is_array($preset)) {
+            throw new Exception('Plage inconnue');
+        }
+
+        $data = $this->fetchBeachData($preset['latitude'], $preset['longitude']);
+        $data['beach_key'] = $beachKey;
+        $data['beach_name'] = $preset['name'];
+        $data['image'] = $preset['image'];
+        return $data;
+    }
+
+    private function applyBeachData(array $data) {
+        $allowEmpty = [
+            'maree_1_type', 'maree_1_jour', 'maree_1_heure', 'maree_1_hauteur', 'maree_1_coefficient',
+            'maree_2_type', 'maree_2_jour', 'maree_2_heure', 'maree_2_hauteur', 'maree_2_coefficient',
+            'maree_3_type', 'maree_3_jour', 'maree_3_heure', 'maree_3_hauteur', 'maree_3_coefficient',
+            'maree_4_type', 'maree_4_jour', 'maree_4_heure', 'maree_4_hauteur', 'maree_4_coefficient'
+        ];
+        foreach ($data as $logicalId => $value) {
+            if (in_array($logicalId, ['beach_key', 'beach_name', 'image'], true)) {
+                continue;
+            }
+            $this->updateValue($logicalId, $value, in_array($logicalId, $allowEmpty, true));
+        }
+    }
+
+    public function refresh() {
+        $latitude = trim($this->getConfiguration('latitude', '45.6267'));
+        $longitude = trim($this->getConfiguration('longitude', '-1.0518'));
+        $data = $this->fetchBeachData($latitude, $longitude);
+        $this->applyBeachData($data);
 
         $this->setStatus('lastCommunication', date('Y-m-d H:i:s'));
         $this->setStatus('timeout', 0);
@@ -505,108 +531,64 @@ class meteodesplages extends eqLogic {
             return $replace;
         }
 
+        $version = jeedom::versionAlias($_version);
+        if (!in_array($version, ['dashboard', 'mobile'], true)) {
+            $version = 'dashboard';
+        }
+
         $id = (int) $this->getId();
-        $name = htmlspecialchars($this->getName(), ENT_QUOTES, 'UTF-8');
-        $v = function ($logicalId, $default = '—') {
-            return htmlspecialchars((string) $this->cmdValue($logicalId, $default), ENT_QUOTES, 'UTF-8');
+        $escape = static function ($value) {
+            return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
         };
-        $cmdId = function ($logicalId) {
+        $value = function ($logicalId, $default = '—') use ($escape) {
+            return $escape($this->cmdValue($logicalId, $default));
+        };
+        $commandId = function ($logicalId) {
             $cmd = $this->getCmd(null, $logicalId);
             return is_object($cmd) ? (int) $cmd->getId() : 0;
         };
 
-        $code = $this->cmdValue('code_meteo', 1);
-        $icon = $this->weatherIcon($code);
-        $refreshId = $cmdId('refresh');
         $image = trim($this->getConfiguration('image', 'plugins/meteodesplages/data/images/pontaillac.webp'));
-        $imageCss = htmlspecialchars($image, ENT_QUOTES, 'UTF-8');
+        $code = $this->cmdValue('code_meteo', 1);
+        $configuredBeach = $this->getConfiguration('plage', 'pontaillac');
+        $beachOptions = '';
+        foreach (self::getBeachList() as $key => $name) {
+            $selected = ($key === $configuredBeach) ? ' selected' : '';
+            $beachOptions .= '<option value="' . $escape($key) . '"' . $selected . '>' . $escape($name) . '</option>';
+        }
+
+        $replace['#id#'] = $id;
+        $replace['#name#'] = $escape($this->getName());
+        $replace['#image#'] = $escape($image);
+        $replace['#weather_icon#'] = $this->weatherIcon($code);
+        $replace['#refresh_cmd_id#'] = $commandId('refresh');
+        $replace['#configured_beach#'] = $escape($configuredBeach);
+        $replace['#beach_options#'] = $beachOptions;
 
         $fields = [
-            'code_meteo','temperature_air','temperature_ressentie','humidite','condition','vent_vitesse','vent_rafales','vent_direction',
-            'precipitations','uv_max','temperature_max','temperature_min','risque_pluie','temperature_mer','vague_hauteur',
-            'vague_periode','vague_direction','houle_hauteur','houle_periode','houle_direction',
-            'maree_1_type','maree_1_jour','maree_1_heure','maree_1_hauteur','maree_1_coefficient',
-            'maree_2_type','maree_2_jour','maree_2_heure','maree_2_hauteur','maree_2_coefficient',
-            'maree_3_type','maree_3_jour','maree_3_heure','maree_3_hauteur','maree_3_coefficient',
-            'maree_4_type','maree_4_jour','maree_4_heure','maree_4_hauteur','maree_4_coefficient','derniere_mise_a_jour'
+            'code_meteo', 'temperature_air', 'temperature_ressentie', 'humidite', 'condition',
+            'vent_vitesse', 'vent_rafales', 'vent_direction', 'precipitations', 'uv_max',
+            'temperature_max', 'temperature_min', 'risque_pluie', 'temperature_mer',
+            'vague_hauteur', 'vague_periode', 'houle_hauteur', 'houle_periode',
+            'maree_1_type', 'maree_1_jour', 'maree_1_heure', 'maree_1_hauteur', 'maree_1_coefficient',
+            'maree_2_type', 'maree_2_jour', 'maree_2_heure', 'maree_2_hauteur', 'maree_2_coefficient',
+            'maree_3_type', 'maree_3_jour', 'maree_3_heure', 'maree_3_hauteur', 'maree_3_coefficient',
+            'maree_4_type', 'maree_4_jour', 'maree_4_heure', 'maree_4_hauteur', 'maree_4_coefficient',
+            'derniere_mise_a_jour'
         ];
 
-        $html = '<div class="eqLogic-widget eqLogic meteodesplages-widget" data-eqType="meteodesplages" data-eqLogic_id="'.$id.'" data-eqLogic_uid="'.$replace['#uid#'].'" data-version="'.$_version.'">';
-        $html .= '<style>
-        .meteodesplages-widget{width:100%;min-width:300px;max-width:920px;padding:0!important;background:transparent!important;border:none!important;box-shadow:none!important;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-        .mdp-card{overflow:hidden;border-radius:18px;background:linear-gradient(145deg,#eefaff 0%,#ffffff 45%,#f0fbf8 100%);color:#183445;box-shadow:0 8px 28px rgba(10,65,90,.18);border:1px solid rgba(40,130,160,.16)}
-        .mdp-hero{position:relative;padding:18px 20px 16px;color:white;background-image:linear-gradient(90deg,rgba(5,42,61,.58),rgba(5,75,95,.16)),url("'.$imageCss.'");background-size:cover;background-position:center;overflow:hidden;min-height:245px}
-        .mdp-hero:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.12));pointer-events:none}
-        .mdp-top{position:relative;z-index:2;display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
-        .mdp-settings-zone{display:block;flex:1;min-width:0;color:inherit;text-decoration:none;cursor:pointer}.mdp-settings-zone:hover,.mdp-settings-zone:focus{color:inherit;text-decoration:none}
-        .mdp-title{font-size:25px;font-weight:750;line-height:1.05;text-transform:uppercase;letter-spacing:.4px}.mdp-sub{font-size:13px;opacity:.88;margin-top:6px}
-        .mdp-refresh{margin:0!important;border:0!important;background:rgba(0,0,0,.28)!important;color:#fff!important;border-radius:10px!important;width:34px;height:34px;padding:0!important;display:flex;align-items:center;justify-content:center;cursor:pointer}.mdp-refresh:hover{background:rgba(0,0,0,.42)!important}.mdp-refresh:disabled{opacity:.65;cursor:wait}
-        .mdp-main{position:relative;z-index:2;display:flex;align-items:center;gap:14px;margin-top:16px}.mdp-weather-icon{font-size:54px;filter:drop-shadow(0 3px 3px rgba(0,0,0,.18))}.mdp-temp{font-size:52px;font-weight:750;line-height:.95}.mdp-temp small{font-size:21px;font-weight:500}.mdp-condition{font-size:15px;margin-top:5px}.mdp-updated{font-size:11px;opacity:.82;margin-top:5px}
-        .mdp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:12px}.mdp-section{background:rgba(255,255,255,.84);border:1px solid rgba(20,105,135,.12);border-radius:14px;padding:12px;box-shadow:0 3px 10px rgba(20,80,105,.07)}
-        .mdp-section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:#167a9d;margin-bottom:10px}.mdp-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.mdp-stat{min-width:0}.mdp-stat.wide{grid-column:1/-1}.mdp-label{font-size:10px;color:#69818e;margin-bottom:2px}.mdp-value{font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mdp-value small{font-size:11px;font-weight:500;color:#5d7785}.mdp-symbol{font-size:17px;margin-right:4px}.mdp-tides{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0 12px 12px}.mdp-tide{background:rgba(255,255,255,.88);border:1px solid rgba(20,105,135,.14);border-radius:14px;padding:10px;text-align:center}.mdp-tide-type{font-size:11px;color:#167a9d;font-weight:800;text-transform:uppercase}.mdp-tide-day{font-size:11px;color:#607d8b;font-weight:650;margin-top:3px}.mdp-tide-time{font-size:22px;font-weight:750;margin:3px 0}.mdp-tide-meta{font-size:11px;color:#607d8b}.mdp-footer{padding:0 14px 12px;text-align:center;color:#78909b;font-size:10px}
-        @media(max-width:720px){.mdp-tides{grid-template-columns:1fr 1fr}.mdp-grid{grid-template-columns:1fr 1fr}.mdp-section:last-child{grid-column:1/-1}.mdp-title{font-size:21px}.mdp-temp{font-size:44px}}
-        @media(max-width:460px){.mdp-tides{grid-template-columns:1fr 1fr}.mdp-grid{grid-template-columns:1fr}.mdp-section:last-child{grid-column:auto}.mdp-hero{padding:16px}.mdp-weather-icon{font-size:44px}.mdp-temp{font-size:39px}.mdp-title{font-size:19px}}
-        </style>';
-        $html .= '<div class="mdp-card"><div class="mdp-hero"><div class="mdp-top">'
-            .'<div class="mdp-settings-zone eqLogicName cursor" data-eqlogic_id="'.$id.'" title="Ouvrir les réglages">'
-                .'<div class="mdp-title">'.$name.'</div>'
-                .'<div class="mdp-sub">Météo de la plage</div>'
-            .'</div>'
-            .'<button type="button" class="btn btn-default btn-sm mdp-refresh" title="Rafraîchir" aria-label="Rafraîchir" '
-                .'onclick="event.stopPropagation();var b=this,i=b.querySelector(\'i\');if('.$refreshId.'<=0){if(typeof toastr!==\'undefined\'){toastr.error(\'Commande Rafraîchir introuvable\');}return;}b.disabled=true;i.classList.add(\'fa-spin\');jeedom.cmd.execute({id:'.$refreshId.',success:function(){setTimeout(function(){i.classList.remove(\'fa-spin\');b.disabled=false;},600);},error:function(){i.classList.remove(\'fa-spin\');b.disabled=false;if(typeof toastr!==\'undefined\'){toastr.error(\'Échec du rafraîchissement\');}}});">'
-                .'<i class="fas fa-sync-alt"></i>'
-            .'</button>'
-        .'</div>';
-        $html .= '<div class="mdp-main"><div class="mdp-weather-icon" id="mdp-'.$id.'-weather-icon">'.$icon.'</div><div><div class="mdp-temp"><span id="mdp-'.$id.'-temperature_air">'.$v('temperature_air').'</span><small> °C</small></div><div class="mdp-condition" id="mdp-'.$id.'-condition">'.$v('condition').'</div><div class="mdp-updated">Mise à jour : <span id="mdp-'.$id.'-derniere_mise_a_jour">'.$v('derniere_mise_a_jour').'</span></div></div></div></div>';
-
-        $section = function($title, $items) use ($id, $v) {
-            $out = '<div class="mdp-section"><div class="mdp-section-title">'.$title.'</div><div class="mdp-stats">';
-            foreach ($items as $item) {
-                [$logicalId,$label,$symbol,$unit,$wide] = $item;
-                $out .= '<div class="mdp-stat'.($wide?' wide':'').'"><div class="mdp-label">'.$label.'</div><div class="mdp-value"><span class="mdp-symbol">'.$symbol.'</span><span id="mdp-'.$id.'-'.$logicalId.'">'.$v($logicalId).'</span>'.($unit!==''?'<small> '.$unit.'</small>':'').'</div></div>';
-            }
-            return $out.'</div></div>';
-        };
-        $html .= '<div class="mdp-grid">';
-        $html .= $section('Atmosphère', [
-            ['temperature_ressentie','Ressentie','🌡️','°C',false],['humidite','Humidité','💧','%',false],
-            ['temperature_min','Minimum','↘️','°C',false],['temperature_max','Maximum','↗️','°C',false],
-            ['precipitations','Précipitations','☔','mm',false],['uv_max','Indice UV','☀️','',false]
-        ]);
-        $html .= $section('Vent', [
-            ['vent_vitesse','Vitesse moyenne','💨','km/h',false],['vent_rafales','Rafales','🌬️','km/h',false],
-            ['vent_direction','Direction','🧭','°',true]
-        ]);
-        $html .= $section('Mer & houle', [
-            ['temperature_mer','Température de la mer','🌊','°C',true],['vague_hauteur','Vagues','〰️','m',false],
-            ['vague_periode','Période vagues','⏱️','s',false],['houle_hauteur','Houle','🌊','m',false],
-            ['houle_periode','Période houle','⏱️','s',false],['risque_pluie','Risque de pluie','🌧️','%',true]
-        ]);
-        $html .= '</div>';
-        $html .= '<div class="mdp-tides">';
-        for ($i = 1; $i <= 4; $i++) {
-            $type = $v('maree_'.$i.'_type');
-            $symbol = ($type === 'Haute') ? '🌊' : '🏖️';
-            $html .= '<div class="mdp-tide"><div class="mdp-tide-type"><span id="mdp-'.$id.'-maree_'.$i.'_symbol">'.$symbol.'</span> <span id="mdp-'.$id.'-maree_'.$i.'_type">'.$type.'</span></div><div class="mdp-tide-day" id="mdp-'.$id.'-maree_'.$i.'_jour">'.$v('maree_'.$i.'_jour').'</div><div class="mdp-tide-time" id="mdp-'.$id.'-maree_'.$i.'_heure">'.$v('maree_'.$i.'_heure').'</div><div class="mdp-tide-meta"><span id="mdp-'.$id.'-maree_'.$i.'_hauteur">'.$v('maree_'.$i.'_hauteur').'</span> m · coef. estimé <span id="mdp-'.$id.'-maree_'.$i.'_coefficient">'.$v('maree_'.$i.'_coefficient').'</span></div></div>';
-        }
-        $html .= '</div><div class="mdp-footer">Données Open-Meteo — marées modélisées : horaires, hauteurs et coefficients estimés. Référence officielle pour la navigation : SHOM.</div></div>';
-
-        $html .= '<script>(function(){';
-        $html .= 'function mdpWeatherIcon(code){code=parseInt(code,10);if(code===0)return "☀️";if(code===1||code===2)return "🌤️";if(code===3)return "☁️";if(code===45||code===48)return "🌫️";if([51,53,55,56,57,61,63,65,66,67,80,81,82].indexOf(code)!==-1)return "🌧️";if([71,73,75,77,85,86].indexOf(code)!==-1)return "❄️";if([95,96,99].indexOf(code)!==-1)return "⛈️";return "🌤️";}';
         foreach ($fields as $logicalId) {
-            $cid = $cmdId($logicalId);
-            if ($cid > 0) {
-                if ($logicalId === 'code_meteo') {
-                    $html .= 'jeedom.cmd.addUpdateFunction('.$cid.',function(_options){var e=document.getElementById("mdp-'.$id.'-weather-icon");if(e){e.textContent=mdpWeatherIcon(_options.display_value);}});';
-                } elseif (preg_match('/^maree_([1-4])_type$/', $logicalId, $matches)) {
-                    $tideIndex = (int) $matches[1];
-                    $html .= 'jeedom.cmd.addUpdateFunction('.$cid.',function(_options){var e=document.getElementById("mdp-'.$id.'-'.$logicalId.'"),s=document.getElementById("mdp-'.$id.'-maree_'.$tideIndex.'_symbol");if(e){e.textContent=_options.display_value;}if(s){s.textContent=(_options.display_value==="Haute")?"🌊":"🏖️";}});';
-                } else {
-                    $html .= 'jeedom.cmd.addUpdateFunction('.$cid.',function(_options){var e=document.getElementById("mdp-'.$id.'-'.$logicalId.'");if(e){e.textContent=_options.display_value;}});';
-                }
-            }
+            $replace['#' . $logicalId . '#'] = $value($logicalId);
+            $replace['#cmd_' . $logicalId . '#'] = $commandId($logicalId);
         }
-        $html .= '})();</script></div>';
+
+        for ($i = 1; $i <= 4; $i++) {
+            $type = (string) $this->cmdValue('maree_' . $i . '_type', '—');
+            $replace['#maree_' . $i . '_symbol#'] = ($type === 'Haute') ? '🌊' : '🏖️';
+        }
+
+        $template = getTemplate('core', $version, 'meteodesplages', 'meteodesplages');
+        $html = template_replace($replace, $template);
         return $this->postToHtml($_version, $html);
     }
 

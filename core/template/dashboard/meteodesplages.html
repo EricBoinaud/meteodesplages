@@ -3,11 +3,17 @@
   <div class="mdp-card">
     <div class="mdp-hero" style="--mdp-image:url(&quot;#image#&quot;)">
       <div class="mdp-top">
-        <div class="mdp-settings-zone eqLogicName cursor" data-eqlogic_id="#id#" title="Ouvrir les réglages">
-          <div class="mdp-title">#name#</div>
-          <div class="mdp-sub">Météo de la plage</div>
+        <div class="mdp-heading">
+          <div class="mdp-settings-zone eqLogicName cursor" data-eqlogic_id="#id#" title="Ouvrir les réglages">
+            <div class="mdp-title">#name#</div>
+            <div class="mdp-sub">Météo de la plage</div>
+          </div>
+          <label class="mdp-beach-picker">
+            <span class="sr-only">Choisir une plage</span>
+            <select class="mdp-beach-select" data-configured-beach="#configured_beach#" aria-label="Choisir une plage">#beach_options#</select>
+          </label>
         </div>
-        <button type="button" class="btn btn-default btn-sm mdp-refresh" data-cmd-id="#refresh_cmd_id#" title="Rafraîchir" aria-label="Rafraîchir"><i class="fas fa-sync-alt"></i></button>
+        <button type="button" class="btn btn-default btn-sm mdp-refresh" data-cmd-id="#refresh_cmd_id#" title="Actualiser la plage affichée" aria-label="Actualiser la plage affichée"><i class="fas fa-sync-alt"></i></button>
       </div>
       <div class="mdp-main">
         <div class="mdp-weather-icon">#weather_icon#</div>

@@ -15,37 +15,114 @@
 
   function notifyError(message) {
     if (typeof toastr !== 'undefined') toastr.error(message);
+    else console.error(message);
+  }
+
+  function storageKey(widget) {
+    return 'meteodesplages.beach.' + (widget.dataset.eqlogic_id || widget.dataset.eqLogic_id || 'default');
+  }
+
+  function getSelectedBeach(widget) {
+    var select = widget.querySelector('.mdp-beach-select');
+    return select ? select.value : '';
+  }
+
+  function setLoading(widget, loading) {
+    widget.classList.toggle('mdp-loading', loading);
+    var button = widget.querySelector('.mdp-refresh');
+    var select = widget.querySelector('.mdp-beach-select');
+    var icon = button ? button.querySelector('i') : null;
+    if (button) button.disabled = loading;
+    if (select) select.disabled = loading;
+    if (icon) icon.classList.toggle('fa-spin', loading);
+  }
+
+  function displayValue(value) {
+    return value === null || typeof value === 'undefined' || value === '' ? '—' : value;
+  }
+
+  function applyData(widget, data) {
+    Object.keys(data || {}).forEach(function (field) {
+      widget.querySelectorAll('[data-field="' + field + '"]').forEach(function (element) {
+        element.textContent = displayValue(data[field]);
+      });
+    });
+
+    var icon = widget.querySelector('.mdp-weather-icon');
+    if (icon) icon.textContent = weatherIcon(data.code_meteo);
+
+    for (var i = 1; i <= 4; i++) {
+      var symbol = widget.querySelector('[data-tide-symbol="' + i + '"]');
+      if (symbol) symbol.textContent = data['maree_' + i + '_type'] === 'Haute' ? '🌊' : '🏖️';
+    }
+
+    if (data.image) {
+      var hero = widget.querySelector('.mdp-hero');
+      if (hero) hero.style.setProperty('--mdp-image', 'url("' + String(data.image).replace(/"/g, '\\"') + '")');
+    }
+  }
+
+  function ajaxErrorMessage(error) {
+    if (!error) return 'Échec du chargement de la plage';
+    return error.message || error.result || error.statusText || 'Échec du chargement de la plage';
+  }
+
+  function loadBeach(widget, beachKey) {
+    var eqLogicId = parseInt(widget.getAttribute('data-eqLogic_id') || widget.dataset.eqlogic_id || '0', 10);
+    if (!eqLogicId || !beachKey) return;
+
+    setLoading(widget, true);
+    domUtils.ajax({
+      type: 'POST',
+      url: 'plugins/meteodesplages/core/ajax/meteodesplages.ajax.php',
+      dataType: 'json',
+      global: false,
+      data: {
+        action: 'getBeachData',
+        eqLogic_id: eqLogicId,
+        beach: beachKey
+      },
+      success: function (response) {
+        var data = response && typeof response.result !== 'undefined' ? response.result : response;
+        applyData(widget, data || {});
+        try { localStorage.setItem(storageKey(widget), beachKey); } catch (e) {}
+        setLoading(widget, false);
+      },
+      error: function (error) {
+        setLoading(widget, false);
+        notifyError(ajaxErrorMessage(error));
+      }
+    });
+  }
+
+  function bindSelector(widget) {
+    var select = widget.querySelector('.mdp-beach-select');
+    if (!select || select.dataset.mdpBound === '1') return;
+    select.dataset.mdpBound = '1';
+
+    var configured = select.dataset.configuredBeach || select.value;
+    var remembered = '';
+    try { remembered = localStorage.getItem(storageKey(widget)) || ''; } catch (e) {}
+    if (remembered && select.querySelector('option[value="' + remembered + '"]')) {
+      select.value = remembered;
+    }
+
+    select.addEventListener('click', function (event) { event.stopPropagation(); });
+    select.addEventListener('change', function (event) {
+      event.stopPropagation();
+      loadBeach(widget, select.value);
+    });
+
+    if (select.value && select.value !== configured) loadBeach(widget, select.value);
   }
 
   function bindRefresh(widget) {
     var button = widget.querySelector('.mdp-refresh');
     if (!button || button.dataset.mdpBound === '1') return;
     button.dataset.mdpBound = '1';
-
     button.addEventListener('click', function (event) {
       event.stopPropagation();
-      var commandId = parseInt(button.dataset.cmdId || '0', 10);
-      var icon = button.querySelector('i');
-      if (!commandId) {
-        notifyError('Commande Rafraîchir introuvable');
-        return;
-      }
-      button.disabled = true;
-      if (icon) icon.classList.add('fa-spin');
-      jeedom.cmd.execute({
-        id: commandId,
-        success: function () {
-          window.setTimeout(function () {
-            if (icon) icon.classList.remove('fa-spin');
-            button.disabled = false;
-          }, 600);
-        },
-        error: function () {
-          if (icon) icon.classList.remove('fa-spin');
-          button.disabled = false;
-          notifyError('Échec du rafraîchissement');
-        }
-      });
+      loadBeach(widget, getSelectedBeach(widget));
     });
   }
 
@@ -57,18 +134,19 @@
       element.dataset.mdpUpdateBound = '1';
 
       jeedom.cmd.addUpdateFunction(commandId, function (_options) {
-        var displayValue = _options.display_value;
+        var select = widget.querySelector('.mdp-beach-select');
+        if (select && select.value !== select.dataset.configuredBeach) return;
+        var display = _options.display_value;
         if (field === 'code_meteo') {
           var icon = widget.querySelector('.mdp-weather-icon');
-          if (icon) icon.textContent = weatherIcon(displayValue);
-          return;
+          if (icon) icon.textContent = weatherIcon(display);
+        } else {
+          element.textContent = displayValue(display);
         }
-
-        element.textContent = displayValue;
-        var tideMatch = field.match(/^maree_([1-4])_type$/);
-        if (tideMatch) {
-          var symbol = widget.querySelector('[data-tide-symbol="' + tideMatch[1] + '"]');
-          if (symbol) symbol.textContent = displayValue === 'Haute' ? '🌊' : '🏖️';
+        var match = field.match(/^maree_([1-4])_type$/);
+        if (match) {
+          var symbol = widget.querySelector('[data-tide-symbol="' + match[1] + '"]');
+          if (symbol) symbol.textContent = display === 'Haute' ? '🌊' : '🏖️';
         }
       });
     });
@@ -77,6 +155,7 @@
   function initWidget(widget) {
     if (!widget || widget.dataset.mdpInitialized === '1') return;
     widget.dataset.mdpInitialized = '1';
+    bindSelector(widget);
     bindRefresh(widget);
     bindLiveValues(widget);
   }
@@ -87,12 +166,9 @@
     scope.querySelectorAll('.meteodesplages-widget').forEach(initWidget);
   }
 
-  window.meteodesplagesWidget = { initAll: initAll };
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function () { initAll(document); });
-  } else {
-    initAll(document);
-  }
+  window.meteodesplagesWidget = { initAll: initAll, loadBeach: loadBeach };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function () { initAll(document); });
+  else initAll(document);
 
   if (typeof MutationObserver !== 'undefined') {
     new MutationObserver(function (mutations) {
