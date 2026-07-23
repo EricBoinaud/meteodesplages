@@ -1,0 +1,227 @@
+name: Contrôle qualité
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - 'feature/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Vérifier le plugin
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Installer PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+
+      - name: Vérifier les fichiers indispensables
+        shell: bash
+        run: |
+          required_files=(
+            "plugin_info/info.json"
+            "plugin_info/install.php"
+            "core/class/meteodesplages.class.php"
+            "desktop/php/meteodesplages.php"
+            "README.md"
+            "CHANGELOG.md"
+            "LICENSE"
+          )
+
+          missing=0
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "::error file=$file::Fichier indispensable absent"
+              missing=1
+            else
+              echo "OK : $file"
+            fi
+          done
+
+          exit "$missing"
+
+      - name: Vérifier la syntaxe PHP
+        shell: bash
+        run: |
+          set -e
+
+          while IFS= read -r -d '' file; do
+            php -l "$file"
+          done < <(
+            find .               -type f               -name '*.php'               -not -path './.git/*'               -print0
+          )
+
+      - name: Valider les fichiers JSON
+        shell: bash
+        run: |
+          set -e
+
+          while IFS= read -r -d '' file; do
+            echo "Validation de $file"
+            php -r '
+              $file = $argv[1];
+              $data = file_get_contents($file);
+
+              if ($data === false) {
+                  fwrite(STDERR, "Impossible de lire $file\n");
+                  exit(1);
+              }
+
+              json_decode($data, true);
+
+              if (json_last_error() !== JSON_ERROR_NONE) {
+                  fwrite(
+                      STDERR,
+                      "$file : " . json_last_error_msg() . "\n"
+                  );
+                  exit(1);
+              }
+            ' "$file"
+          done < <(
+            find .               -type f               -name '*.json'               -not -path './.git/*'               -print0
+          )
+
+      - name: Vérifier la cohérence de la version
+        shell: bash
+        run: |
+          set -e
+
+          INFO_VERSION="$(
+            php -r '
+              $info = json_decode(
+                  file_get_contents("plugin_info/info.json"),
+                  true
+              );
+
+              echo $info["pluginVersion"]
+                  ?? $info["version"]
+                  ?? "";
+            '
+          )"
+
+          CLASS_VERSION="$(
+            php -r '
+              $content = file_get_contents(
+                  "core/class/meteodesplages.class.php"
+              );
+
+              if (
+                  preg_match(
+                      "/const\s+PLUGIN_VERSION\s*=\s*[\x27\x22]([^\x27\x22]+)[\x27\x22]/",
+                      $content,
+                      $matches
+                  )
+              ) {
+                  echo $matches[1];
+              }
+            '
+          )"
+
+          if [ -z "$INFO_VERSION" ]; then
+            echo "::error file=plugin_info/info.json::Version absente"
+            exit 1
+          fi
+
+          if [ -z "$CLASS_VERSION" ]; then
+            echo "::error file=core/class/meteodesplages.class.php::Constante PLUGIN_VERSION absente"
+            exit 1
+          fi
+
+          if [ "$INFO_VERSION" != "$CLASS_VERSION" ]; then
+            echo "::error::Versions incohérentes : info.json=$INFO_VERSION, classe=$CLASS_VERSION"
+            exit 1
+          fi
+
+          echo "Version cohérente : $INFO_VERSION"
+
+      - name: Vérifier le fichier info.json
+        shell: bash
+        run: |
+          php -r '
+            $file = "plugin_info/info.json";
+            $info = json_decode(file_get_contents($file), true);
+
+            $required = [
+                "id",
+                "name",
+                "description",
+                "licence",
+                "author",
+                "require",
+                "category",
+                "language",
+                "compatibility"
+            ];
+
+            $errors = [];
+
+            foreach ($required as $key) {
+                if (
+                    !array_key_exists($key, $info)
+                    || $info[$key] === ""
+                    || $info[$key] === []
+                    || $info[$key] === null
+                ) {
+                    $errors[] = "Champ manquant ou vide : $key";
+                }
+            }
+
+            if (($info["id"] ?? "") !== "meteodesplages") {
+                $errors[] = "Le champ id doit être meteodesplages";
+            }
+
+            if ($errors) {
+                foreach ($errors as $error) {
+                    fwrite(STDERR, $error . PHP_EOL);
+                }
+
+                exit(1);
+            }
+
+            echo "plugin_info/info.json est valide" . PHP_EOL;
+          '
+
+      - name: Vérifier les marqueurs de conflit Git
+        shell: bash
+        run: |
+          if grep -RIn             --exclude-dir=.git             --exclude='*.min.js'             --exclude='*.min.css'             -E '^(<<<<<<<|=======|>>>>>>>)' .; then
+            echo "::error::Des marqueurs de conflit Git ont été trouvés"
+            exit 1
+          fi
+
+          echo "Aucun marqueur de conflit Git trouvé"
+
+      - name: Vérifier la taille des fichiers
+        shell: bash
+        run: |
+          set -e
+
+          max_size=$((5 * 1024 * 1024))
+          oversized=0
+
+          while IFS= read -r -d '' file; do
+            size="$(stat -c %s "$file")"
+
+            if [ "$size" -gt "$max_size" ]; then
+              echo "::warning file=$file::Fichier supérieur à 5 Mio"
+              oversized=1
+            fi
+          done < <(
+            find .               -type f               -not -path './.git/*'               -print0
+          )
+
+          if [ "$oversized" -eq 0 ]; then
+            echo "Aucun fichier anormalement volumineux"
+          fi
