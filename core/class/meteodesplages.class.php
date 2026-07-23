@@ -11,21 +11,66 @@ class meteodesplages extends eqLogic {
 
     const PLUGIN_VERSION = '1.0.0';
 
-    private static function beachPresets() {
-        return [
-            'pontaillac' => ['latitude' => '45.6267', 'longitude' => '-1.0518', 'image' => 'plugins/meteodesplages/data/images/pontaillac.webp'],
-            'grande_conche' => ['latitude' => '45.6184', 'longitude' => '-1.0208', 'image' => ''],
-            'foncillon' => ['latitude' => '45.6229', 'longitude' => '-1.0364', 'image' => ''],
-            'le_chay' => ['latitude' => '45.6265', 'longitude' => '-1.0427', 'image' => ''],
-            'pigeonnier' => ['latitude' => '45.6295', 'longitude' => '-1.0481', 'image' => ''],
-            'nauzan' => ['latitude' => '45.6388', 'longitude' => '-1.0725', 'image' => ''],
-            'saint_georges' => ['latitude' => '45.6038', 'longitude' => '-1.0009', 'image' => '']
-        ];
+    private const BEACHES = [
+        'pontaillac' => [
+            'name' => 'Pontaillac',
+            'latitude' => '45.6267',
+            'longitude' => '-1.0518',
+            'image' => 'plugins/meteodesplages/data/images/pontaillac.webp'
+        ],
+        'grande_conche' => [
+            'name' => 'Grande Conche',
+            'latitude' => '45.6184',
+            'longitude' => '-1.0208',
+            'image' => ''
+        ],
+        'foncillon' => [
+            'name' => 'Foncillon',
+            'latitude' => '45.6229',
+            'longitude' => '-1.0364',
+            'image' => ''
+        ],
+        'le_chay' => [
+            'name' => 'Le Chay',
+            'latitude' => '45.6265',
+            'longitude' => '-1.0427',
+            'image' => ''
+        ],
+        'pigeonnier' => [
+            'name' => 'Le Pigeonnier',
+            'latitude' => '45.6295',
+            'longitude' => '-1.0481',
+            'image' => ''
+        ],
+        'nauzan' => [
+            'name' => 'Nauzan',
+            'latitude' => '45.6388',
+            'longitude' => '-1.0725',
+            'image' => ''
+        ],
+        'saint_georges' => [
+            'name' => 'Saint-Georges-de-Didonne',
+            'latitude' => '45.6038',
+            'longitude' => '-1.0009',
+            'image' => ''
+        ]
+    ];
+
+    public static function getBeachList() {
+        $beaches = [];
+        foreach (self::BEACHES as $key => $beach) {
+            $beaches[$key] = $beach['name'];
+        }
+        return $beaches;
+    }
+
+    public static function getBeachPreset($key) {
+        return self::BEACHES[$key] ?? null;
     }
 
     public function preSave() {
         $preset = $this->getConfiguration('plage', 'pontaillac');
-        $presets = self::beachPresets();
+        $presets = self::BEACHES;
         if ($preset !== 'personnalisee' && isset($presets[$preset])) {
             $this->setConfiguration('latitude', $presets[$preset]['latitude']);
             $this->setConfiguration('longitude', $presets[$preset]['longitude']);
