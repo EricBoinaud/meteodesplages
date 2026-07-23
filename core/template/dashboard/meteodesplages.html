@@ -149,6 +149,7 @@
     var eqLogicId = parseInt(widget.getAttribute('data-eqLogic_id') || widget.dataset.eqlogic_id || '0', 10);
     if (!eqLogicId || !beachKey) return;
 
+    updateMapLink(widget, beachKey);
     setLoading(widget, true);
     domUtils.ajax({
       type: 'POST',
