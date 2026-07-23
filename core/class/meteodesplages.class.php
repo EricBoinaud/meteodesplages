@@ -9,7 +9,7 @@
 
 class meteodesplages extends eqLogic {
 
-    const PLUGIN_VERSION = '1.0.0';
+    const PLUGIN_VERSION = '1.1.0';
 
     private const BEACHES = [
         'pontaillac' => [
@@ -22,37 +22,37 @@ class meteodesplages extends eqLogic {
             'name' => 'Grande Conche',
             'latitude' => '45.6184',
             'longitude' => '-1.0208',
-            'image' => ''
+            'image' => '/plugins/meteodesplages/data/images/grande_conche.webp'
         ],
         'foncillon' => [
             'name' => 'Foncillon',
             'latitude' => '45.6229',
             'longitude' => '-1.0364',
-            'image' => ''
+            'image' => '/plugins/meteodesplages/data/images/foncillon.webp'
         ],
         'le_chay' => [
             'name' => 'Le Chay',
             'latitude' => '45.6265',
             'longitude' => '-1.0427',
-            'image' => ''
+            'image' => '/plugins/meteodesplages/data/images/le_chay.webp'
         ],
         'pigeonnier' => [
             'name' => 'Le Pigeonnier',
             'latitude' => '45.6295',
             'longitude' => '-1.0481',
-            'image' => ''
+            'image' => '/plugins/meteodesplages/data/images/pigeonnier.webp'
         ],
         'nauzan' => [
             'name' => 'Nauzan',
             'latitude' => '45.6388',
             'longitude' => '-1.0725',
-            'image' => ''
+            'image' => '/plugins/meteodesplages/data/images/nauzan.webp'
         ],
         'saint_georges' => [
             'name' => 'Saint-Georges-de-Didonne',
             'latitude' => '45.6038',
             'longitude' => '-1.0009',
-            'image' => ''
+            'image' => '/plugins/meteodesplages/data/images/saint_georges.webp'
         ]
     ];
 
